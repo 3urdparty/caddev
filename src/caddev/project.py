@@ -1,5 +1,3 @@
-"""CAD project definition and build orchestration."""
-
 from __future__ import annotations
 
 import importlib
@@ -7,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from .rpc import RpcClient
-from .serialize import serialize_shape
+from .serialize import serialize_component
 
 
 BuildFunction = Callable[[], Any]
@@ -21,12 +19,19 @@ class Component:
     name: str | None = None
 
     def load_factory(self) -> BuildFunction:
-        module = importlib.import_module(self.module)
-        factory = getattr(module, self.factory)
+        module = importlib.import_module(
+            self.module
+        )
+
+        factory = getattr(
+            module,
+            self.factory,
+        )
 
         if not callable(factory):
             raise TypeError(
-                f"{self.module}.{self.factory} is not callable"
+                f"{self.module}.{self.factory} "
+                "is not callable"
             )
 
         return factory
@@ -34,19 +39,22 @@ class Component:
     def build(self):
         return self.load_factory()()
 
+
 @dataclass
 class Project:
-    components: list[Component] = field(default_factory=list)
+    components: list[Component] = field(
+        default_factory=list
+    )
 
     def build_component(
         self,
         component: Component,
         client: RpcClient,
     ) -> None:
-        shape = component.build()
+        result = component.build()
 
-        payload = serialize_shape(
-            shape,
+        payload = serialize_component(
+            result,
             component_id=component.id,
             name=component.name,
         )
@@ -56,6 +64,12 @@ class Project:
             **payload,
         )
 
-    def build_all(self, client: RpcClient) -> None:
+    def build_all(
+        self,
+        client: RpcClient,
+    ) -> None:
         for component in self.components:
-            self.build_component(component, client)
+            self.build_component(
+                component,
+                client,
+            )
