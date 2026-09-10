@@ -25,3 +25,5 @@ packages = ["src/caddev"]
 [tool.basedpyright]
 include = ["src"]
 typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"

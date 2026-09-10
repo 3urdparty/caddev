@@ -3,8 +3,15 @@ from __future__ import annotations
 import base64
 import io
 from typing import Any
+
 from build123d import Location, Part
-from .geometry import ComponentGeometry
+
+from .geometry import (
+    Appearance,
+    ComponentGeometry,
+    FeatureGeometry,
+    Material,
+)
 
 
 def serialize_component(
@@ -12,46 +19,125 @@ def serialize_component(
     *,
     component_id: str,
     name: str | None = None,
-) -> dict:
-    if isinstance(result, ComponentGeometry):
-        shape = result.shape
-        datums = result.datums
-    elif isinstance(result, Part):
-        shape = result
-        datums = {}
-    else:
+) -> dict[str, Any]:
+    if isinstance(result, Part):
+        result = ComponentGeometry.from_shape(
+            result
+        )
+
+    if not isinstance(
+        result,
+        ComponentGeometry,
+    ):
         raise TypeError(
-            "build() must return Part or ComponentGeometry, "
+            "build() must return Part or "
+            "ComponentGeometry, "
             f"got {type(result).__name__}"
         )
-
-    wrapped = getattr(shape, "wrapped", None)
-
-    if wrapped is None:
-        raise TypeError(
-            f"expected build123d Part, "
-            f"got {type(shape).__name__}"
-        )
-
-    brep = shape_to_brep(wrapped)
 
     return {
         "id": component_id,
         "name": name or component_id,
+        "features": {
+            feature_id: serialize_feature(
+                feature
+            )
+            for feature_id, feature
+            in result.features.items()
+        },
+        "datums": {
+            datum_id: serialize_location(
+                location
+            )
+            for datum_id, location
+            in result.datums.items()
+        },
+    }
+
+
+def serialize_feature(
+    feature: FeatureGeometry,
+) -> dict[str, Any]:
+    wrapped = getattr(
+        feature.shape,
+        "wrapped",
+        None,
+    )
+
+    if wrapped is None:
+        raise TypeError(
+            "FeatureGeometry.shape must be "
+            "a build123d Part"
+        )
+
+    brep = shape_to_brep(
+        wrapped
+    )
+
+    return {
+        "name": feature.name,
         "brep64": base64.b64encode(
             brep
         ).decode("ascii"),
-        "datums": {
-            datum_id: serialize_location(location)
-            for datum_id, location in datums.items()
-        },
+        "appearance": (
+            serialize_appearance(
+                feature.appearance
+            )
+            if feature.appearance
+            else None
+        ),
+        "material": (
+            serialize_material(
+                feature.material
+            )
+            if feature.material
+            else None
+        ),
+    }
+
+
+def serialize_appearance(
+    appearance: Appearance,
+) -> dict[str, Any]:
+    return {
+        "color": (
+            list(appearance.color)
+            if appearance.color
+            else None
+        ),
+        "transparency": (
+            appearance.transparency
+        ),
+        "shininess": (
+            appearance.shininess
+        ),
+    }
+
+
+def serialize_material(
+    material: Material,
+) -> dict[str, Any]:
+    return {
+        "name": material.name,
+        "density": material.density,
+        "youngs_modulus": (
+            material.youngs_modulus
+        ),
+        "poisson_ratio": (
+            material.poisson_ratio
+        ),
+        "description": (
+            material.description
+        ),
     }
 
 
 def serialize_location(
     location: Location,
-) -> dict:
-    position, rotation = location.to_tuple()
+) -> dict[str, Any]:
+    position, rotation = (
+        location.to_tuple()
+    )
 
     return {
         "position": list(position),
@@ -59,11 +145,16 @@ def serialize_location(
     }
 
 
-def shape_to_brep(shape) -> bytes:
+def shape_to_brep(
+    shape,
+) -> bytes:
     from OCP.BRepTools import BRepTools
 
-    buf = io.BytesIO()
-    BRepTools.Write_s(shape, buf)
+    buffer = io.BytesIO()
 
-    return buf.getvalue()
+    BRepTools.Write_s(
+        shape,
+        buffer,
+    )
 
+    return buffer.getvalue()
