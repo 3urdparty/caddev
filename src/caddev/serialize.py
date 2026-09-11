@@ -86,6 +86,9 @@ def serialize_feature(
             if feature.appearance
             else None
         ),
+        "location": serialize_location(
+            feature.location
+        ),
         "material": (
             serialize_material(
                 feature.material

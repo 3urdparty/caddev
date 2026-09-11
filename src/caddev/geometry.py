@@ -63,12 +63,11 @@ class Material:
 
 @dataclass
 class FeatureGeometry:
-    """One independently-visible feature of a component."""
-
     shape: Part
-
     name: str | None = None
-
+    location: Location = field(
+        default_factory=Location
+    )
     appearance: Appearance | None = None
     material: Material | None = None
 

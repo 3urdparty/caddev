@@ -15,6 +15,15 @@ from .rpc import PROTOCOL_VERSION, RpcClient, RpcError
 DEFAULT_RETRIES = 5
 DEFAULT_RETRY_DELAY = 1.0
 
+_client: RpcClient | None = None
+def get_freecad_client() -> RpcClient:
+    if _client is None:
+        raise RuntimeError(
+            "caddev is not connected to FreeCAD"
+        )
+
+    return _client
+
 
 @dataclass(frozen=True)
 class BridgeInfo:
@@ -82,6 +91,8 @@ def connect_freecad(
     retries: int = DEFAULT_RETRIES,
     retry_delay: float = DEFAULT_RETRY_DELAY,
 ) -> RpcClient:
+
+    global _client
     info("Finding FreeCAD bridge...")
 
     bridge = read_bridge_info()
@@ -114,6 +125,7 @@ def connect_freecad(
                 f"at {bridge.host}:{bridge.port}"
             )
 
+            _client = client
             return client
 
         except (OSError, RpcError) as exc:

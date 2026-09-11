@@ -5,6 +5,7 @@ from .geometry import (
     Material,
 )
 from .project import Component, Project
+from .debug import highlight
 
 
 __all__ = [
@@ -14,4 +15,6 @@ __all__ = [
     "FeatureGeometry",
     "Material",
     "Project",
+    "highlight",
 ]
+

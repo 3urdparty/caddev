@@ -35,6 +35,7 @@ class RpcError(Exception):
         self.data = data
 
 
+
 def encode_request(
     req_id: int,
     method: str,
@@ -134,3 +135,4 @@ class RpcClient:
             finally:
                 if self._sock is not None:
                     self._sock.settimeout(self.timeout)
+
